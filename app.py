@@ -2,35 +2,45 @@ import streamlit as st
 from groq import Groq
 
 # --- CONFIG ---
-st.set_page_config(page_title="KIZUNA AI WEB", page_icon="🔱", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="KIZUNA AI WEB", page_icon="🔱", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for Floating Menu Button and Mobile UI
+# --- THE REAL CSS HACK FOR MENU BUTTON ---
 st.markdown("""
     <style>
+    /* Main Background */
     .stApp { background-color: #0e0e0e; color: white; }
     
-    /* Floating Menu Button Styling */
-    .menu-btn {
-        position: fixed;
-        top: 15px;
-        left: 15px;
-        z-index: 999;
-        background-color: #FFD700;
-        color: black;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 10px;
-        font-weight: bold;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
+    /* Sidebar styling */
+    [data-testid="stSidebar"] { background-color: #131314 !important; min-width: 250px !important; }
+
+    /* Hacking the Default Streamlit Sidebar Button */
+    button[kind="headerNoSpacing"] {
+        background-color: #FFD700 !important; /* Gold Color */
+        color: black !important;
+        border-radius: 10px !important;
+        width: 60px !important;
+        height: 45px !important;
+        position: fixed !important;
+        top: 15px !important;
+        left: 15px !important;
+        z-index: 999999 !important;
+        display: block !important;
     }
 
-    /* Hide default streamlit elements */
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    /* Sidebar styling */
-    [data-testid="stSidebar"] { background-color: #131314 !important; }
+    /* Making the "The Unbreakable Bond" text look clean */
+    .header-text {
+        text-align: center;
+        color: #FFD700;
+        font-family: 'Inter', sans-serif;
+        margin-top: 20px;
+    }
+
+    /* Message styling */
     .stChatMessage { background-color: #1e1f20 !important; border-radius: 15px !important; }
+    
+    /* Hide default header to keep it clean */
+    header { visibility: hidden; }
+    footer { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -55,15 +65,13 @@ with st.sidebar:
             st.session_state.messages = session['chats']
             st.rerun()
     
+    st.write("---")
     if st.button("🗑️ Clear All History"):
         st.session_state.all_sessions = []
         st.rerun()
 
 # --- MAIN CONTENT ---
-# Floating Menu Button Label (Instructional)
-st.markdown("<button class='menu-btn'>☰ Menu</button>", unsafe_allow_html=True)
-
-st.markdown("<h3 style='text-align: center; color: #FFD700;'>The Unbreakable Bond</h3>", unsafe_allow_html=True)
+st.markdown("<h3 class='header-text'>The Unbreakable Bond</h3>", unsafe_allow_html=True)
 
 # Display Messages
 for message in st.session_state.messages:
