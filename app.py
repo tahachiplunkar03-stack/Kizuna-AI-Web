@@ -1,87 +1,93 @@
 import streamlit as st
 from groq import Groq
 
-# --- MOBILE MASTER CONFIG ---
+# --- MASTER CONFIG ---
 st.set_page_config(page_title="KIZUNA AI WEB", page_icon="🔱", layout="wide")
 
-# --- CUSTOM CSS FOR TOP MENU ---
+# Custom CSS for Gold Theme
 st.markdown("""
     <style>
     .stApp { background-color: #0e0e0e; color: white; }
-    
-    /* Hide the broken sidebar completely */
     [data-testid="stSidebar"] { display: none !important; }
-    button[kind="headerNoSpacing"] { display: none !important; }
-
-    /* Top Navigation Bar */
-    .top-bar {
-        background-color: #131314;
-        padding: 10px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #FFD700;
-        text-align: center;
-    }
-    
-    .stChatMessage { background-color: #1e1f20 !important; border-radius: 15px !important; }
     header { visibility: hidden; }
     footer { visibility: hidden; }
+    
+    /* Gold Buttons */
+    div.stButton > button {
+        background-color: #FFD700 !important;
+        color: black !important;
+        font-weight: bold !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Chat bubbles */
+    .stChatMessage { background-color: #1e1f20 !important; border-radius: 15px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# API Setup
+# API Initialization
 client = Groq(api_key="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")
-if "all_sessions" not in st.session_state: st.session_state.all_sessions = []
+
+# --- SMART MEMORY ---
+if "all_sessions" not in st.session_state: st.session_state.all_sessions = {}
 if "messages" not in st.session_state: st.session_state.messages = []
+if "current_session_id" not in st.session_state: st.session_state.current_session_id = None
 
-# --- TOP NAVIGATION MENU ---
-st.markdown("<div class='top-bar'><h2 style='color: #FFD700; margin:0;'>🔱 KIZUNA AI</h2></div>", unsafe_allow_html=True)
+# --- TOP NAVIGATION ---
+st.markdown("<h2 style='text-align: center; color: #FFD700;'>🔱 KIZUNA AI</h2>", unsafe_allow_html=True)
 
-# Menu Buttons in a Row
-col1, col2, col3 = st.columns([1, 1, 1])
+col1, col2, col3 = st.columns([1, 2, 1])
+
 with col1:
-    if st.button("➕ New"):
+    if st.button("➕ New Chat"):
         st.session_state.messages = []
+        st.session_state.current_session_id = None
         st.rerun()
+
 with col2:
-    # History Dropdown (Ab click ka jhanjhat hi khatam)
-    options = ["Select History"] + [s['title'] for s in st.session_state.all_sessions]
+    # History Selectbox
+    options = ["Current Chat"] + list(st.session_state.all_sessions.keys())
     selection = st.selectbox("", options, label_visibility="collapsed")
-    if selection != "Select History":
-        for s in st.session_state.all_sessions:
-            if s['title'] == selection:
-                st.session_state.messages = s['chats']
-                st.rerun()
+    if selection != "Current Chat" and selection != st.session_state.current_session_id:
+        st.session_state.messages = st.session_state.all_sessions[selection]
+        st.session_state.current_session_id = selection
+        st.rerun()
+
 with col3:
-    if st.button("🗑️ Clear"):
-        st.session_state.all_sessions = []
+    if st.button("🗑️ Clear All"):
+        st.session_state.all_sessions = {}
+        st.session_state.messages = []
+        st.session_state.current_session_id = None
         st.rerun()
 
 st.write("---")
 
-# --- MAIN CHAT ---
+# --- CHAT AREA ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# User Input Logic
 if prompt := st.chat_input("Bolo Bhai..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Setting a stable session ID if none exists
+    if not st.session_state.current_session_id:
+        st.session_state.current_session_id = prompt[:25] + "..."
+
     with st.chat_message("assistant"):
         try:
             response = client.chat.completions.create(
-                messages=[{"role": "system", "content": "You are Kizuna AI. Direct answers."}] + 
-                         [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages[-6:]],
+                messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages[-10:]],
                 model="llama-3.3-70b-versatile"
             )
             reply = response.choices[0].message.content
             st.markdown(reply)
             st.session_state.messages.append({"role": "assistant", "content": reply})
             
-            title = prompt[:20] + "..."
-            if not any(s['title'] == title for s in st.session_state.all_sessions):
-                st.session_state.all_sessions.insert(0, {"title": title, "chats": st.session_state.messages.copy()})
+            # Save or Update the session in the dictionary
+            st.session_state.all_sessions[st.session_state.current_session_id] = st.session_state.messages.copy()
         except Exception as e:
             st.error(f"Error: {e}")
